@@ -1,124 +1,181 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
-void line_fields(
-  char *line,
-  char **fields,
-  unsigned char fields_count,
-  unsigned char *field_index
-) {
+const char *keys[8] = {
+  "byr",
+  "iyr",
+  "eyr",
+  "hgt",
+  "hcl",
+  "ecl",
+  "pid",
+  "cid"
+};
+
+int get_key_index(char *key) {
+  for(int i = 0; i < 8; i++) {
+    if (!strcmp(key, keys[i])) {
+      return i;
+    }
+  }
+  return -1;
+};
+
+unsigned int prepare_input(char *line, char **fields) {
+  if (line[0] == '\n') {
+    return 1;
+  }
+
+  const size_t line_length = strlen(line);
+  if (line[line_length - 1] == '\n') {
+    line[line_length - 1] = '\0';
+  }
+
   char sep[3] = ": ";
   char *token = strtok(line, sep);
-  unsigned char index = 0;
+  unsigned int index = 0;
+  int key_index = -1;
 
   while(token != NULL) {
-    if (index % 2 == 0 && *field_index < fields_count) {
-      const size_t len = strlen(token);
-      fields[*field_index] = (char *)malloc(len * sizeof(char));
-      (void)strcpy(fields[*field_index], token);
-      (*field_index)++;
+    if (index % 2 == 0) {
+      key_index = get_key_index(token);
+    } else {
+      if (key_index != -1) {
+        (void)strcpy(fields[key_index], token);
+      }
+      key_index = -1;
     }
     token = strtok(NULL, sep);
-    index++;
+    (void)index++;
   }
+
+  return 0;
+};
+
+int check_is_hex_color(char *field) {
+  if (strlen(field) != 7) {
+    return 0;
+  }
+  const char prefix;
+  char *color = malloc(6 * sizeof(char));
+  (void)strncpy(color, field + 1, 6);
+  if (color[strspn(color, "0123456789abcdef")] == 0) {
+    return 1;
+  }
+  return 0;
 }
 
-unsigned char check_fields(
-  char **fields,
-  unsigned char fields_count,
-  const char *required_fields[7],
-  const char *optional_fields[1]
-) {
-  const size_t len = 8;
-  char *checks = (char *)malloc(len * sizeof(char));
-  for (unsigned char i = 0; i < len; i++) {
-    const char *pattern = i < 7 ? required_fields[i] : optional_fields[0];
-    checks[i] = 0;
-    if (i == 7) {
-      checks[i] = 1;
-      continue;
-    }
-    for (unsigned char j = 0; j < fields_count; j++) {
-      if ((int)fields[j] && !strcmp(pattern, fields[j])) {
-        checks[i] = 1;
-      }
+int check_is_eye_color(char *field) {
+  const char *variants[7] = { "amb", "blu", "brn", "gry", "grn", "hzl", "oth" };
+  for (int i = 0; i < 7; i++) {
+    if (!strcmp(variants[i], field)) {
+      return 1;
     }
   }
-  for (unsigned char i = 0; i < len; i++) {
-    if (!checks[i]) {
+  return 0;
+}
+
+int check_is_passport_id(char *field) {
+  size_t length = strlen(field);
+  if (length != 9) {
+    return 0;
+  }
+  for (int i = 0; i < length; i++) {
+    if (!isdigit(field[i])) {
       return 0;
     }
   }
-  free(checks);
   return 1;
 }
 
-void solve_part_one(
-  FILE *file,
-  const char *required_fields[7],
-  const char *optional_fields[1]
-) {
-  char line[256];
-  unsigned int valid_count = 0;
-  const unsigned char fields_count = 8;
-  unsigned char field_index = 0;
-  char **fields = malloc((size_t)fields_count * sizeof(char *));
-
-  while (fgets(line, sizeof(line), file)) {
-    if (line[0] == '\n') {
-      if (field_index < fields_count) {
-        for (int j = field_index; j < fields_count; j++) {
-          fields[j] = 0;
-        }
-      }
-
-      const unsigned char valid = check_fields(
-        fields,
-        fields_count,
-        required_fields,
-        optional_fields
-      );
-      if (valid) {
-        valid_count++;
-      }
-
-      field_index = 0;
-      continue;
+void solve_part_one(char **fields, unsigned int *answer) {
+  size_t valid_count = 0;
+  for(int i = 0; i < 8; i++) {
+    if (fields[i] != NULL && strlen(fields[i]) > 0) {
+      valid_count++;
     }
-    line_fields(line, fields, fields_count, &field_index);
+  }
+  if (valid_count == 8 || (valid_count == 7 && strlen(fields[7]) == 0)) {
+    (*answer)++;
+  }
+};
+
+void solve_part_two(char **fields, unsigned int *answer) {
+  unsigned int result[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  int is_valid = 1;
+  int numeric_value = 0;
+
+  for (int i = 0; i < 8; i++) {
+    switch (i) {
+      case 0:
+        numeric_value = atoi(fields[i]);
+        if (numeric_value > 1919 && numeric_value < 2003) {
+          result[i] = 1;
+        }
+        numeric_value = 0;
+        break;
+      case 1:
+        numeric_value = atoi(fields[i]);
+        if (numeric_value > 2009 && numeric_value < 2021) {
+          result[i] = 1;
+        }
+        numeric_value = 0;
+        break;
+      case 2:
+        numeric_value = atoi(fields[i]);
+        if (numeric_value > 2019 && numeric_value < 2031) {
+          result[i] = 1;
+        }
+        numeric_value = 0;
+        break;
+      case 3:
+        if ((strstr(fields[i], "cm")) != NULL) {
+          int value = atoi(fields[i]);
+          if (value > 149 && value < 194) {
+            result[i] = 1;
+          }
+        } else if ((strstr(fields[i], "in")) != NULL) {
+          int value = atoi(fields[i]);
+          if (value > 58 && value < 77) {
+            result[i] = 1;
+          }
+        }
+        break;
+      case 4:
+        if (check_is_hex_color(fields[i])) {
+          result[i] = 1;
+        }
+        break;
+      case 5:
+        if (check_is_eye_color(fields[i])) {
+          result[i] = 1;
+        }
+        break;
+      case 6:
+        if (check_is_passport_id(fields[i])) {
+          result[i] = 1;
+        }
+        break;
+      case 7:
+      default:
+        break;
+    }
   }
 
-  printf("Part 1: %d\n", valid_count);
-
-  for (int i = 0; i < fields_count; i++) {
-    free(fields[i]);
+  for (int i = 0; i < 7; i++) {
+    if (!result[i]) {
+      is_valid = 0;
+    }
   }
-  free(fields);
-}
 
-void solve_part_two(
-  FILE *file,
-  const char *required_fields[1],
-  const char *optional_fields[7]
-) {
-  puts("Part 2: Not implemented");
-}
+  if (is_valid) {
+    (*answer)++;
+  }
+};
 
 int main(int argc, char *argv[]) {
-  const char *optional_fields[1] = {
-    "cid"
-  };
-  const char *required_fields[7] = {
-    "byr",
-    "iyr",
-    "eyr",
-    "hgt",
-    "hcl",
-    "ecl",
-    "pid"
-  };
-
   if (argc < 2) {
     puts("Missing 'filename' parameter");
     return 1;
@@ -131,11 +188,37 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  solve_part_one(file, required_fields, optional_fields);
-  rewind(file);
-  solve_part_two(file, required_fields, optional_fields);
+  char line[256];
+  char *fields[8];
+  unsigned int part_one_answer = 0;
+  unsigned int part_two_answer = 0;
+
+  for (int i = 0; i < 8; i++) {
+    fields[i] = malloc(16 * sizeof(char));
+  }
+
+  while (fgets(line, sizeof(line), file)) {
+    unsigned int new_input = prepare_input(line, fields);
+    if (!new_input) {
+      continue;
+    }
+
+    solve_part_one(fields, &part_one_answer);
+    solve_part_two(fields, &part_two_answer);
+
+    for (int i = 0; i < 8; i++) {
+      (void)strncpy(fields[i], "", 16);
+    }
+  }
+
+  for (int i = 0; i < 8; i++) {
+    free(fields[i]);
+  }
 
   fclose(file);
+
+  printf("Part one answer: %d\n", part_one_answer);
+  printf("Part two answer: %d\n", part_two_answer);
 
   return 0;
 }
