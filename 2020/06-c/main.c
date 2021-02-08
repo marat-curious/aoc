@@ -32,6 +32,18 @@ void solve_part_one(char *input, unsigned int *answer) {
   *answer += uniq_chars;
 }
 
+void solve_part_two(char *input, unsigned int *count, unsigned int *answer) {
+  int hash[128] = { 0 };
+  for (int i = 0; i < strlen(input); i++) {
+    hash[input[i]] += 1;
+  }
+  for (int i = 0; i < 128; ++i) {
+    if (hash[i] == *count) {
+      (*answer)++;
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     puts("Missing 'filename' parameter");
@@ -50,21 +62,26 @@ int main(int argc, char *argv[]) {
 
   char line[LINE_LENGTH];
   char *input = (char *)malloc(MIN_INPUT_LENGTH * sizeof(char));
+  unsigned int index = 0;
 
   while(fgets(line, sizeof(line), file)) {
     const size_t len = strlen(line);
     if (len == 1 && line[0] == '\n') {
       solve_part_one(input, &part_one_answer);
+      solve_part_two(input, &index, &part_two_answer);
       *input = '\0';
+      index = 0;
       continue;
     }
     if (len > 1 && line[len - 1] == '\n') {
       line[len - 1] = '\0';
     }
     if ((strlen(input) + len) >= MIN_INPUT_LENGTH) {
-      input = (char *)realloc(input, (strlen(input) * sizeof(char)) + (len * sizeof(char)));
+      const int length = (strlen(input) * sizeof(char)) + (len * sizeof(char));
+      input = (char *)realloc(input, length);
     }
     (void)strcat(input, line);
+    index++;
   }
 
   free(input);
