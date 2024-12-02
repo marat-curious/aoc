@@ -17,4 +17,7 @@ stream.on('data', (chunk) => {
 stream.on('end', () => {
   const distance = locations.getDistance();
   console.log('Distance: ', distance);
+
+  const similarity = locations.getSimilarity();
+  console.log('Similarity: ', similarity);
 });
