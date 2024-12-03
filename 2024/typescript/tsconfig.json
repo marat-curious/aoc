@@ -1,9 +1,12 @@
 {
   "compilerOptions": {
+    "outDir": "solutions",
+    "rootDir": "src",
     "target": "es2016",
     "esModuleInterop": true,
     "moduleResolution": "node",
     "strict": true,
     "skipLibCheck": true
-  }
+  },
+  "include": ["src/**/*"]
 }
