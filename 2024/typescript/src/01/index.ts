@@ -1,7 +1,7 @@
 import { createReadStream } from 'node:fs';
 import { Locations } from './locations.js';
 
-const stream = createReadStream('../input');
+const stream = createReadStream('./input');
 
 const locations = new Locations();
 
